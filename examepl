@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Salida a CONSOLA en formato JSON -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Zona horaria de México -->
+            <timeZone>America/Mexico_City</timeZone>
+        </encoder>
+    </appender>
+
+    <!-- Salida a ARCHIVO en formato JSON (opcional) -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/aplicacion.json</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Un archivo por día, conserva 7 días -->
+            <fileNamePattern>logs/aplicacion-%d{yyyy-MM-dd}.json</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <timeZone>America/Mexico_City</timeZone>
+        </encoder>
+    </appender>
+
+    <!-- Nivel general -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+        <appender-ref ref="JSON_FILE"/>
+    </root>
+
+    <!-- Tu paquete con nivel INFO -->
+    <logger name="com.ejemplo.demo" level="INFO"/>
+
+</configuration>
+
+
+
+
+
+
+
+
+-----------
+
+package com.ejemplo.demo.config;
+
+import lombok.extern.slf4j.Slf4j;
+import net.logstash.logback.argument.StructuredArguments;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+import java.util.Arrays;
+
+@Slf4j
+@Aspect
+@Component
+public class LoggingAspect {
+
+    @AfterReturning(
+        pointcut = "execution(* com.ejemplo.demo.service..*(..))",
+        returning = "resultado")
+    public void cuandoTermina(JoinPoint jp, Object resultado) {
+        log.info("Servicio ejecutado correctamente",
+                 StructuredArguments.keyValue("metodo", jp.getSignature().toShortString()),
+                 StructuredArguments.keyValue("estado", "OK"),
+                 StructuredArguments.keyValue("argumentos", Arrays.toString(jp.getArgs())),
+                 StructuredArguments.keyValue("resultado", String.valueOf(resultado)));
+    }
+
+    @AfterThrowing(
+        pointcut = "execution(* com.ejemplo.demo.service..*(..))",
+        throwing = "error")
+    public void cuandoFalla(JoinPoint jp, Throwable error) {
+        log.error("Error en la ejecución del servicio",
+                  StructuredArguments.keyValue("metodo", jp.getSignature().toShortString()),
+                  StructuredArguments.keyValue("estado", "ERROR"),
+                  StructuredArguments.keyValue("argumentos", Arrays.toString(jp.getArgs())),
+                  StructuredArguments.keyValue("causa", error.getMessage()));
+    }
+}
