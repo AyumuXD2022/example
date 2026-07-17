@@ -1,0 +1,36 @@
+
+
+import org.apache.cxf.binding.soap.SoapMessage;
+import org.apache.cxf.binding.soap.interceptor.AbstractSoapInterceptor;
+import org.apache.cxf.interceptor.Fault;
+import org.apache.cxf.phase.Phase;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+public class EmptyTagCleanerInterceptor extends AbstractSoapInterceptor {
+
+    public EmptyTagCleanerInterceptor() {
+        super(Phase.RECEIVE);   // corre antes del unmarshalling de JAXB
+    }
+
+    @Override
+    public void handleMessage(SoapMessage message) throws Fault {
+        try (InputStream is = message.getContent(InputStream.class)) {
+            if (is == null) return;
+
+            String xml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+
+            // elimina <tag></tag> y <tag/>
+            xml = xml.replaceAll("<(\\w+:)?(\\w+)\\s*></\\1?\\2>", "");
+            xml = xml.replaceAll("<(\\w+:)?(\\w+)\\s*/>", "");
+
+            message.setContent(InputStream.class,
+                    new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+        } catch (IOException e) {
+            throw new Fault(e);
+        }
+    }
+}
